@@ -72,13 +72,13 @@ cd keys && 7za a ./BallotKeysExport.zip -pAAAAAAAAAAAAAAAA
 2 - Archives modifiées
 ======================
 
-Le répertoire `altered` contient des archives ayant été altérées :
+Le répertoire `altered` contient des archives ayant été altérées pour fausser les résultats :
 
 - `swap`: l'archive a été modifiée pour inverser l'identifiant des candidats
 - `add`: l'urne a été bourrée avec des votes additionels (toutes les preuves de votes sont toujours valides, par contre le nombre de votant ne correspond plus à la liste d'émargement)
 - `replace`: certains votes on été modifiés (toutes les preuves de votes sont toujours valides ET le nombre de votes correspond à la liste d'émargement !)
 
-Dans les trois cas (swap, add et replace), la vérification de l'urne indique une victoired du mauvais candidat au second tour, cf. copies d'écrans:
+Dans les trois cas, la vérification de l'urne indique une victoired du mauvais candidat au second tour, cf. copies d'écrans:
 
 - [swap](altered/swap/result.png)
 - [add](altered/add/result.png)
