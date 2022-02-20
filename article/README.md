@@ -339,18 +339,186 @@ cryptographiquement sécure par d'autres de moins bonne qualité.
 
 *Neovote nous précise que cette chaine n'a qu'un but de remplissage sans objectifs d'aléa particulier.*
 
+## V - Analyse du code javascript de la page web de vote
+
+### Bibliothèque cryptographique utilisée
+
+Le code javascript de la page de vote transmise par le serveur neovote est transpilé (compilation typescript vers javascript), subie du "tree-shaking" (suppression des parties du code source n'étant pas utilisé) et est enfin minifié (suppression de l'indentation, renommmage des variables).
+
+Il est toutefois possible de rétablir l'indentation et d'apprécier les similitudes dans le code.
+
+Par exemple, l'outil de minification utilisé par néovote ne modifie pas les noms des closures (i.e. des fonctions utilisant une variable définie dans un scope parent), de fait on peut retrouver dans le code une fonction `aes_init` contenant des variables `ginit`, `ginv`, `gmul`.
+
+À partir de là il est facile en faisant [une recherche dans github](https://github.com/search?q=language%3Ajs+aes_init+ginv+ginit+gmul&type=code) de déterminer que la bibliothèque utilisée est [asmcrypto.js](https://github.com/asmcrypto/asmcrypto.js).
+
+De fait, la comparaison de la fonction `aes_init` donne :
+
+Code minifié de néovote (réindenté par nos soins) :
+
+```javascript
+function aes_init() {
+    if (!$WWVLmkTY) {
+        ginit();
+    }
+    function _s($WWVLmkWW) {
+        var $WWVLmYFq;
+        var $WWVLmkTq;
+        var $zx;
+        $WWVLmkTq = $zx = ginv($WWVLmkWW);
+        for ($WWVLmYFq = 0; $WWVLmYFq < 4; $WWVLmYFq++) {
+            $WWVLmkTq = (($WWVLmkTq << 1) | ($WWVLmkTq >>> 7)) & 255;
+            $zx ^= $WWVLmkTq;
+        }
+        $zx ^= 99;
+        return $zx;
+    }
+    $aes_sbox = [];
+    $aes_sinv = [];
+    $aes_enc = [[], [], [], []];
+    $aes_dec = [[], [], [], []];
+    for (var $WWVLmVTm = 0; $WWVLmVTm < 256; $WWVLmVTm++) {
+        var $WWVLmkTq = _s($WWVLmVTm);
+        $aes_sbox[$WWVLmVTm] = $WWVLmkTq;
+        $aes_sinv[$WWVLmkTq] = $WWVLmVTm;
+        $aes_enc[0][$WWVLmVTm] = (gmul(2, $WWVLmkTq) << 24) | ($WWVLmkTq << 16) | ($WWVLmkTq << 8) | gmul(3, $WWVLmkTq);
+        $aes_dec[0][$WWVLmkTq] = (gmul(14, $WWVLmVTm) << 24) | (gmul(9, $WWVLmVTm) << 16) | (gmul(13, $WWVLmVTm) << 8) | gmul(11, $WWVLmVTm);
+        for (var $WWVLmkTF = 1; $WWVLmkTF < 4; $WWVLmkTF++) {
+            $aes_enc[$WWVLmkTF][$WWVLmVTm] = ($aes_enc[$WWVLmkTF - 1][$WWVLmVTm] >>> 8) | ($aes_enc[$WWVLmkTF - 1][$WWVLmVTm] << 24);
+            $aes_dec[$WWVLmkTF][$WWVLmkTq] = ($aes_dec[$WWVLmkTF - 1][$WWVLmkTq] >>> 8) | ($aes_dec[$WWVLmkTF - 1][$WWVLmkTq] << 24);
+        }
+    }
+    $WWVLmkTp = true;
+}
+```
+
+[code de asmcrypto.js](https://github.com/asmcrypto/asmcrypto.js/blob/8644af6a9200439b41c788692a43db5ff8249507/src/aes/aes.asm.js#L97-L136):
+
+```javascript
+  function aes_init() {
+    if (!ginit_done) ginit();
+
+    // Calculates AES S-Box value
+    function _s(a) {
+      var c, s, x;
+      s = x = ginv(a);
+      for (c = 0; c < 4; c++) {
+        s = ((s << 1) | (s >>> 7)) & 255;
+        x ^= s;
+      }
+      x ^= 99;
+      return x;
+    }
+
+    // Tables
+    aes_sbox = [],
+      aes_sinv = [],
+      aes_enc = [[], [], [], []],
+      aes_dec = [[], [], [], []];
+
+    for (var i = 0; i < 256; i++) {
+      var s = _s(i);
+
+      // S-Box and its inverse
+      aes_sbox[i] = s;
+      aes_sinv[s] = i;
+
+      // Ecryption and Decryption tables
+      aes_enc[0][i] = (gmul(2, s) << 24) | (s << 16) | (s << 8) | gmul(3, s);
+      aes_dec[0][s] = (gmul(14, i) << 24) | (gmul(9, i) << 16) | (gmul(13, i) << 8) | gmul(11, i);
+      // Rotate tables
+      for (var t = 1; t < 4; t++) {
+        aes_enc[t][i] = (aes_enc[t - 1][i] >>> 8) | (aes_enc[t - 1][i] << 24);
+        aes_dec[t][s] = (aes_dec[t - 1][s] >>> 8) | (aes_dec[t - 1][s] << 24);
+      }
+    }
+
+    aes_init_done = true;
+  }
+```
+
+En outre, nous savons que l'urne contenait des données chiffrées avec RSAES-PKCS1-v1_5.
+Il se trouve que RSAES-PKCS1-v1_5 pas implémenté dans asmcrypto.js, par contre une Pull Request a été ouverte pour l'ajouter (https://github.com/asmcrypto/asmcrypto.js/pull/172).
+
+Cette PR ajoute notamment une nouvelle fonction `getNonZeroRandomValues` (https://github.com/asmcrypto/asmcrypto.js/pull/172/files#diff-cc348d6afd005d15a5a7612748435053a28d5184067811f0f4d73461f57b8ea6R24-R36) faisant appel à une autre fonction `getRandomValues` déjà présente dans asmcrypto avant la PR:
+
+```javascript
+export function getRandomValues(buf: Uint32Array | Uint8Array): void {
+  if (typeof process !== 'undefined') {
+    const nodeCrypto = require('crypto');
+    const bytes = nodeCrypto.randomBytes(buf.length);
+    buf.set(bytes);
+    return;
+  }
+  if (window.crypto && window.crypto.getRandomValues) {
+    window.crypto.getRandomValues(buf);
+    return;
+  }
+  if (self.crypto && self.crypto.getRandomValues) {
+    self.crypto.getRandomValues(buf);
+    return;
+  }
+  // @ts-ignore
+  if (window.msCrypto && window.msCrypto.getRandomValues) {
+    // @ts-ignore
+    window.msCrypto.getRandomValues(buf);
+    return;
+  }
+  throw new Error('No secure random number generator available.');
+}
+
++ export function getNonZeroRandomValues(buf: Uint8Array) {
++   getRandomValues(buf);
++   for (let i = 0; i < buf.length; i++) {
++     let byte = buf[i];
++     while (!byte) {
++       const octet = new Uint8Array(1);
++       getRandomValues(octet);
++       byte = octet[0];
++     }
++     buf[i] = byte;
++   }
++ }
+```
+
+Le code minifé de néovote contient là encore un code très proche :
+
+```javascript
+var WWVLmLmg = function (WWVLmLmH) {
+    if (window.crypto && window.crypto.getRandomValues) {
+        window.crypto.getRandomValues(WWVLmLmH);
+        return;
+    }
+    if (window.msCrypto && window.msCrypto.getRandomValues) {
+        window.msCrypto.getRandomValues(WWVLmLmH);
+        return;
+    }
+    throw new Error("No secure random number generator available.");
+};
+var WWVLmLVx = function (WWVLmLmH) {
+    WWVLmLmg(WWVLmLmH);
+    for (var $WWVLmVTm = 0; $WWVLmVTm < WWVLmLmH.length; $WWVLmVTm++) {
+        var $WWVLmLVs = WWVLmLmH[$WWVLmVTm];
+        while (!$WWVLmLVs) {
+            var $WWVLmLVr = new Uint8Array(1);
+            WWVLmLmg($WWVLmLVr);
+            $WWVLmLVs = $WWVLmLVr[0];
+        }
+        WWVLmLmH[$WWVLmVTm] = $WWVLmLVs;
+    }
+};
+```
+
 ### Étude du chiffrement du bulletin
 
-Comme dit précédemment, nous supposons que le chiffrement RSAES-PKCS1-v1_5 du bulletin se fasse côté client.
+La présence de cette version spécifique de la biblothéque asmcrypto.js laisse penser que le chiffrement RSAES-PKCS1-v1_5 du bulletin se fasse côté client.
 
-La lecture du code de la page web du site [primaire.neovote.com](https://primaire.neovote.com) laisse à penser qu'une [version modifiée de la bibliotèque asmcrypto.js](https://github.com/asmcrypto/asmcrypto.js/pull/172) est utilisée pour cela.
-Cette bibliothèque ne semble pas avoir reçu d'audit de sécurité, sa dernière version remonte à 2018 et la modification apportant le support de RSAES-PKCS1-v1_5 est en attente de revue depuis 2 ans.
+Cette bibliothèque ne semble pas avoir reçu d'audit de sécurité, sa dernière version publiée remonte à 2018 et la pull request apportant le support de RSAES-PKCS1-v1_5 est en attente de revue depuis août 2019.
 
-Il ne nous est pas possible d'établir avec certitude que c'est bien cette bibliothèque qui est utilisée pour le chiffrement du bulletin. Si tel était le cas, cela pourrait aller à l'encontre du [Vade-mecum de cryptographie de l'ANSSI](https://www.ssi.gouv.fr/uploads/2021/03/anssi-guide-selection_crypto-1.0.pdf) qui indique dans sa partie `2.2.5  Utiliser des bibliothèques éprouvées` :
+Il ne nous est pas possible d'établir avec certitude que c'est bien cette bibliothèque qui est utilisée pour le chiffrement du bulletin . Si tel était le cas, cela pourrait aller à l'encontre du [Vade-mecum de cryptographie de l'ANSSI](https://www.ssi.gouv.fr/uploads/2021/03/anssi-guide-selection_crypto-1.0.pdf) qui indique dans sa partie `2.2.5  Utiliser des bibliothèques éprouvées` :
 
 > C’est pourquoi il est impératif de n’employer que des bibliothèques éprouvées bénéficiant d’un suivi de leur sécurité pour tout appel à  des mécanismes cryptographiques.
 
-## V - Le processus de vérification
+## VI - Le processus de vérification
 
 Le script de vérification disponible sur [www.verifier-mon-vote.fr](https://www.verifier-mon-vote.fr/) réalise les opérations suivantes :
 
@@ -378,7 +546,7 @@ Le script de vérification disponible sur [www.verifier-mon-vote.fr](https://www
 |:------------------------------------------------------------:|
 | Crédits: Neovote                                             |
 
-## VI - Altération de l'urne
+## VII - Altération de l'urne
 
 Comme nous l'avons vu, l'urne peut sans problème être modifiée et rechiffrée pour produire une urne valide au sens du système de vérification. Cela nous permet différentes attaques...
 
@@ -452,7 +620,7 @@ et deux autres votes ayant été pris aléatoirement dans l'urne. Malgré les mo
 
 *Néovote nous a souligné que les urnes modifiées n'impactent en aucun cas le site officiel [primaire.neovote.com](https://primaire.neovote.com) qui doit être considéré comme la seule source des données de références. Leur authenticité étant garantie par le scellement des serveurs, ainsi qu'un programme de transparence via leur partenaire ID FACTO.*
 
-## VII - Conclusion
+## VIII - Conclusion
 
 Il convient de le souligner : en l'état **rien ne permet de penser que la primaire à été l'objet d'une fraude quelconque**.
 
