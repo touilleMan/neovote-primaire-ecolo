@@ -2,7 +2,7 @@
 
 Avant propos :
 
-Cet article vise à analyser **du point de vu d'un votant** un système de vote par internet utilisé lors d'une élection à caractère politique de premier plan.
+Cet article vise à analyser **du point de vue d'un votant** un système de vote par internet utilisé lors d'une élection à caractère politique de premier plan.
 
 De fait, comme le rappel la [délibération n° 2019-053 du 25 avril 2019 portant adoption d'une recommandation relative à la sécurité des systèmes de vote par correspondance électronique, notamment via Internet](https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000038661239/) :
 
@@ -47,7 +47,7 @@ Après contact par mail de Neovote, nous avons obtenu plus d'informations.
 
 De fait le système Neovote comprend deux parties:
 
-- un site web permettant aux utilisateurs de voter ([primaire.neovote.com](https://primaire.neovote.com) dans le notre cas), chaque organisation de vote ayant son propre site
+- un site web permettant aux utilisateurs de voter ([primaire.neovote.com](https://primaire.neovote.com) dans notre cas), chaque organisation de vote ayant son propre site
 - un site web permettant à un utilisateur de vérifier l'urne ainsi que la prise en compte de son vote ([verifier-mon-vote.fr](https://verifier-mon-vote.fr), qui est commun à toutes les organisations de votes). Ce site est opéré par un huissier de justice indépendamment de Neovote.
 
 D'un point de vu légal, Neovote s'appuie sur la [délibération CNIL n°2019-053](https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000038661239/) portant adoption d'une recommandation relative à la sécurité des systèmes de vote par correspondance électronique, notamment via Internet.
@@ -58,7 +58,7 @@ Cette recommandation n'oblige pas à rendre disponible à tout électeur une doc
 
 > Devant l'extension continue du vote par Internet à tous types d'élections, la commission souhaite rappeler que le vote par correspondance électronique, notamment via Internet, présente des difficultés accrues [...] principalement à cause de l'opacité et de la technicité importante des solutions mises en œuvre, ainsi que de la très grande difficulté de s'assurer de l'identité et de la liberté de choix de la personne effectuant les opérations de vote à distance.
 
-*Neovote a indiqué que seuls les exports indépendants habilités dans le périmètre II-900/IGI-1300 peuvent avoir accès à des précisions techniques sur le système.*
+*Neovote a indiqué que seuls les experts indépendants habilités dans le périmètre II-900/IGI-1300 peuvent avoir accès à des précisions techniques sur le système.*
 
 ## II - Le vote et sa vérification
 
@@ -122,7 +122,7 @@ La clé de déchiffrement est présente en dur dans le script :
 
 *Interrogé sur la raison la raison de l'utilisation de chiffrement symétrique AES sur la preuve de vote, étant donnée que cette clé est publique (et est toujours la même puisque en dur dans le code), Neovote répond que AES est utilisé dans ce cas non pas dans un but cryptographique mais uniquement de servir de padding.*
 
-Le [padding](https://fr.wikipedia.org/wiki/Remplissage_(cryptographie)) est une opération cryptographique visant à donner une taille fix à des données de tailles variable. Toutefois ici les données sont toujours de la même taille (cf. ci-dessous). De plus AES256-CBC n'est pas un algorithme de padding (il utilise lui même [PKCS7](https://en.wikipedia.org/wiki/Padding_(cryptography)#PKCS#5_and_PKCS#7) pour ses propres besoin de padding). Enfin la raison d'avoir recours à du padding ici n'est pas évidente : la preuve de vote étant uniquement affichée à l'utilisateur votant.
+Le [padding](https://fr.wikipedia.org/wiki/Remplissage_(cryptographie)) est une opération cryptographique visant à donner une taille fixe à des données de tailles variable. Toutefois ici les données sont toujours de la même taille (cf. ci-dessous). De plus AES256-CBC n'est pas un algorithme de padding (il utilise lui même [PKCS7](https://en.wikipedia.org/wiki/Padding_(cryptography)#PKCS#5_and_PKCS#7) pour ses propres besoin de padding). Enfin la raison d'avoir recours à du padding ici n'est pas évidente : la preuve de vote étant uniquement affichée à l'utilisateur votant.
 
 La preuve de vote déchiffrée donne 5 hashes :
 
@@ -243,7 +243,7 @@ Notons enfin l'utilisation de RSA en mode [ECB](https://fr.wikipedia.org/wiki/Mo
 |:--:|
 | Crédits: Neovote |
 
-ECB est notamment vulnérable aux attaques par ré-ordonnancement (i.e. il n'est pas possible de détecter si des blocks chiffrés ont été inversés, résultant en un message déchiffré considéré comme valide bien que différent de l'original).
+ECB est notamment vulnérable aux attaques par ré-ordonnancement (i.e. il n'est pas possible de détecter si des blocs chiffrés ont été inversés, résultant en un message déchiffré considéré comme valide bien que différent de l'original).
 
 *Néovote nous précise que RSA ECB n'est pas utilisé tant que le message à chiffrer est inférieur à la taille d'un bloc.*
 
@@ -291,7 +291,7 @@ Le fichier `ballot_data.csv` est l'urne à proprement parler. Il est composé d'
 
 Enfin le fichier `extra_hashes.csv` contient une liste de hashes supplémentaires à prendre en compte lors de la vérification de la preuve de vote.
 
-Nous supposons que le but de ces hashes est de permettre de toujours retourner une preuve de vote contenant 5 hashes, y compris pour les tout premiers votants : si il n'y a moins de 5 votes disponibles, le serveur créé des hashes additionnels et les ajoutes dans ce fichier.
+Nous supposons que le but de ces hashes est de permettre de toujours retourner une preuve de vote contenant 5 hashes, y compris pour les tout premiers votants : si il n'y a moins de 5 votes disponibles, le serveur crée des hashes additionnels et les ajoutes dans ce fichier.
 
 Une fois déchiffré, le bulletin se présente sous la forme:
 
@@ -343,7 +343,7 @@ cryptographiquement sécure par d'autres de moins bonne qualité.
 
 ### Bibliothèque cryptographique utilisée
 
-Le code javascript de la page de vote transmise par le serveur neovote est transpilé (compilation typescript vers javascript), subie du "tree-shaking" (suppression des parties du code source n'étant pas utilisé) et est enfin minifié (suppression de l'indentation, renommmage des variables).
+Le code javascript de la page de vote transmise par le serveur neovote est transpilé (compilation typescript vers javascript), subit du "tree-shaking" (suppression des parties du code source n'étant pas utilisé) et est enfin minifié (suppression de l'indentation, renommmage des variables).
 
 Il est toutefois possible de rétablir l'indentation et d'apprécier les similitudes dans le code.
 
@@ -437,7 +437,7 @@ function aes_init() {
 ```
 
 En outre, nous savons que l'urne contenait des données chiffrées avec RSAES-PKCS1-v1_5.
-Il se trouve que RSAES-PKCS1-v1_5 pas implémenté dans asmcrypto.js, par contre une Pull Request a été ouverte pour l'ajouter (https://github.com/asmcrypto/asmcrypto.js/pull/172).
+Il se trouve que RSAES-PKCS1-v1_5 n'est pas implémenté dans asmcrypto.js, par contre une Pull Request a été ouverte pour l'ajouter (https://github.com/asmcrypto/asmcrypto.js/pull/172).
 
 Cette PR ajoute notamment une nouvelle fonction `getNonZeroRandomValues` (https://github.com/asmcrypto/asmcrypto.js/pull/172/files#diff-cc348d6afd005d15a5a7612748435053a28d5184067811f0f4d73461f57b8ea6R24-R36) faisant appel à une autre fonction `getRandomValues` déjà présente dans asmcrypto avant la PR:
 
